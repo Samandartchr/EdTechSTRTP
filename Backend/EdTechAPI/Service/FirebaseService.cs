@@ -9,7 +9,7 @@ namespace Services
         public readonly FirestoreDb _firestore;
         public FirebaseService()
         {
-            string path = "../practise-d5653-firebase-adminsdk-fbsvc-ae3dbd49f7.json";
+            string path = "practise-d5653-firebase-adminsdk-fbsvc-ae3dbd49f7.json";
             var credential = GoogleCredential.FromFile(path);
             _firestore = new FirestoreDbBuilder
             {

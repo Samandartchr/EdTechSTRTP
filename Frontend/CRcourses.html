@@ -81,7 +81,13 @@
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ title, description })
+      body: JSON.stringify({ 
+      coursetitle: title, 
+      coursedescription: description,
+      courseimageurl: "",
+      coursecontenturl: "",
+      ispublished: false
+})
     });
 
     const data = await response.json();

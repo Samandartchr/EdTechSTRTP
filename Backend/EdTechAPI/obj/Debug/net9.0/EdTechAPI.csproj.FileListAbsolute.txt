@@ -452,3 +452,4 @@ C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\EdTechAPI\obj\D
 C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\EdTechAPI\obj\Debug\net9.0\EdTechAPI.pdb
 C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\EdTechAPI\obj\Debug\net9.0\EdTechAPI.genruntimeconfig.cache
 C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\EdTechAPI\obj\Debug\net9.0\ref\EdTechAPI.dll
+C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\EdTechAPI\obj\Debug\net9.0\EdTechAPI.sourcelink.json
