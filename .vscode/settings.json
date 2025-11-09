@@ -1,0 +1,7 @@
+{
+    "dataworkspace.excludedProjects": [
+        "Courses/Courses.sqlproj",
+        "courses/courses.sqlproj"
+    ],
+    "dotnet.defaultSolution": "Education.sln"
+}

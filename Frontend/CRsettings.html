@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Creator Home</title>
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <div id="menu">
+    <button class="sidebar-button" onclick="window.location.href='CRhome.html'">Home</button>
+    <button class="sidebar-button" style="background-color: lightgray;">Settings</button>
+    <button class="sidebar-button" onclick="window.location.href='CRcourses.html'">Courses</button>
+    <button class="sidebar-button">Metrics</button>
+  </div>
+
+  <div id="settings" class="contents">
+    <form id="settingsForm">
+    <!-- Profile Image -->
+    <img src="https://via.placeholder.com/100" alt="Profile Image" class="profile-img">
+    <input type="file" id="profileImage" name="profileImage" accept="image/*">
+
+    <!-- Name -->
+    <label for="name">First Name</label>
+    <input type="text" id="name" name="name" placeholder="Enter your first name">
+
+    <!-- Surname -->
+    <label for="surname">Surname</label>
+    <input type="text" id="surname" name="surname" placeholder="Enter your surname">
+
+    <!-- Phone Number -->
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" name="phone" placeholder="+1 234 567 890">
+
+    <!-- Email -->
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="Enter your email" readonly>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button type="submit" class="save">Save Changes</button>
+      <button type="reset" class="cancel">Cancel</button>
+    </div>
+  </form>
+  </div>
+
+  <script type="module" src="scripts/auth.js"></script>
+</body>
+</html>

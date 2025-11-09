@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Quiz Editor (MVP)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 20px; background:#f6f7fb; color:#111; }
+    .editor { max-width:900px; margin: auto; display:flex; flex-direction:column; gap:12px; }
+    input[type="text"], textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; }
+    textarea { min-height:80px; resize:vertical; }
+    .controls { display:flex; gap:8px; align-items:center; }
+    .questions { display:flex; flex-direction:column; gap:12px; margin-top:6px; }
+    .qcard { background:white; border-radius:8px; padding:12px; border:1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(16,24,40,0.03); }
+    .qhead { display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:10px; }
+    .qtools { display:flex; gap:6px; }
+    .qtools button { padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
+    .options { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .opt-row { display:flex; gap:8px; align-items:center; }
+    .opt-row input[type="text"] { flex:1; }
+    .img-preview { margin-top:8px; display:flex; gap:8px; align-items:center; }
+    .img-preview img { max-width:160px; max-height:100px; border-radius:6px; object-fit:cover; border:1px solid #e2e8f0; }
+    .small { font-size:12px; color:#666; }
+    .btn-primary { background:#0b74ff; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .btn-ghost { background:transparent; border:1px solid #cbd5e1; padding:8px 10px; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="editor">
+    <input id="quiz-title" type="text" placeholder="Quiz title (required)" />
+    <textarea id="quiz-desc" placeholder="Quiz description (optional)"></textarea>
+
+    <div class="controls">
+      <button id="add-question-btn" class="btn-ghost" type="button">+ Add Question</button>
+      <div style="flex:1"></div>
+      <button id="save-quiz-btn" class="btn-primary">💾 Save Quiz</button>
+    </div>
+
+    <div id="questions-container" class="questions"></div>
+  </div>
+
+  <script>
+
+    
+    // Minimal unique id generator for DOM keys
+    let uid = 1;
+    function getUid() { return uid++; }
+
+    // In-memory model
+    const quiz = {
+      title: '',
+      description: '',
+      questions: [] // each: { id, text, imageFile, imageUrl, options: [{id, text, correct}] }
+    };
+
+    // DOM refs
+    const qContainer = document.getElementById('questions-container');
+    const addQBtn = document.getElementById('add-question-btn');
+    const saveBtn = document.getElementById('save-quiz-btn');
+    const titleInput = document.getElementById('quiz-title');
+    const descInput = document.getElementById('quiz-desc');
+
+    // Helpers
+    function makeEmptyQuestion() {
+      return {
+        id: getUid(),
+        text: '',
+        imageFile: null,
+        imageUrl: null,
+        options: [
+          { id: getUid(), text: 'Option 1', correct: true },
+          { id: getUid(), text: 'Option 2', correct: false }
+        ]
+      };
+    }
+
+    function render() {
+      // Only update input values if they're empty
+      if (!titleInput.value) {
+        titleInput.value = quiz.title;
+      }
+      if (!descInput.value) {
+        descInput.value = quiz.description;
+      }
+
+      // Update model with current input values
+      quiz.title = titleInput.value;
+      quiz.description = descInput.value;
+
+      qContainer.innerHTML = '';
+      quiz.questions.forEach((q, qi) => {
+        const card = document.createElement('div');
+        card.className = 'qcard';
+
+        // Header row: label + tools
+        const head = document.createElement('div');
+        head.className = 'qhead';
+
+        const label = document.createElement('div');
+        label.innerHTML = `<strong>Question ${qi + 1}</strong>`;
+
+        const tools = document.createElement('div');
+        tools.className = 'qtools';
+        // move up
+        const up = document.createElement('button');
+        up.textContent = '⬆️';
+        up.title = 'Move up';
+        up.disabled = (qi === 0);
+        up.addEventListener('click', () => {
+          if (qi > 0) {
+            [quiz.questions[qi - 1], quiz.questions[qi]] = [quiz.questions[qi], quiz.questions[qi - 1]];
+            render();
+          }
+        });
+        // move down
+        const down = document.createElement('button');
+        down.textContent = '⬇️';
+        down.title = 'Move down';
+        down.disabled = (qi === quiz.questions.length - 1);
+        down.addEventListener('click', () => {
+          if (qi < quiz.questions.length - 1) {
+            [quiz.questions[qi + 1], quiz.questions[qi]] = [quiz.questions[qi], quiz.questions[qi + 1]];
+            render();
+          }
+        });
+        // delete
+        const del = document.createElement('button');
+        del.textContent = '🗑️';
+        del.title = 'Delete question';
+        del.addEventListener('click', () => {
+          // revoke any object URL for safety
+          if (q.imageUrl) URL.revokeObjectURL(q.imageUrl);
+          quiz.questions.splice(qi, 1);
+          render();
+        });
+
+        tools.appendChild(up);
+        tools.appendChild(down);
+        tools.appendChild(del);
+
+        head.appendChild(label);
+        head.appendChild(tools);
+
+        // Body: question text, image input/preview, options
+        const qtext = document.createElement('input');
+        qtext.type = 'text';
+        qtext.placeholder = 'Question text (optional)';
+        qtext.value = q.text;
+        qtext.addEventListener('input', (e) => {
+          q.text = e.target.value;
+        });
+
+        // Image uploader
+        const imgSection = document.createElement('div');
+        imgSection.className = 'img-section';
+        const imgRow = document.createElement('div');
+        imgRow.style.display = 'flex';
+        imgRow.style.gap = '8px';
+        imgRow.style.alignItems = 'center';
+        const addImgBtn = document.createElement('button');
+        addImgBtn.className = 'btn-ghost';
+        addImgBtn.textContent = q.imageUrl ? 'Replace Image' : 'Add Image';
+        addImgBtn.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.addEventListener('change', (ev) => {
+            const file = ev.target.files[0];
+            if (!file) return;
+            // revoke old URL
+            if (q.imageUrl) URL.revokeObjectURL(q.imageUrl);
+            q.imageFile = file;
+            q.imageUrl = URL.createObjectURL(file);
+            render();
+          });
+          input.click();
+        });
+
+        imgRow.appendChild(addImgBtn);
+
+        // Remove image button (visible if image exists)
+        if (q.imageUrl) {
+          const preview = document.createElement('div');
+          preview.className = 'img-preview';
+          const img = document.createElement('img');
+          img.src = q.imageUrl;
+          img.alt = 'question image';
+          preview.appendChild(img);
+
+          const rm = document.createElement('button');
+          rm.className = 'btn-ghost';
+          rm.textContent = 'Remove Image';
+          rm.addEventListener('click', () => {
+            if (q.imageUrl) URL.revokeObjectURL(q.imageUrl);
+            q.imageFile = null;
+            q.imageUrl = null;
+            render();
+          });
+          imgRow.appendChild(preview);
+          imgRow.appendChild(rm);
+        }
+
+        imgSection.appendChild(imgRow);
+
+        // Options list
+        const opts = document.createElement('div');
+        opts.className = 'options';
+        q.options.forEach((opt, oi) => {
+          const row = document.createElement('div');
+          row.className = 'opt-row';
+
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = `correct-${q.id}`; // grouped per question
+          radio.checked = !!opt.correct;
+          radio.addEventListener('change', () => {
+            // set this as the single correct option
+            q.options.forEach(o => o.correct = false);
+            opt.correct = true;
+            render(); // refresh radios
+          });
+
+          const txt = document.createElement('input');
+          txt.type = 'text';
+          txt.placeholder = `Option ${oi + 1}`;
+          txt.value = opt.text;
+          txt.addEventListener('input', (e) => {
+            opt.text = e.target.value;
+          });
+
+          const optDel = document.createElement('button');
+          optDel.textContent = '🗑️';
+          optDel.title = 'Remove option';
+          optDel.addEventListener('click', () => {
+            if (q.options.length <= 2) {
+              // don't allow fewer than 2 options
+              alert('A question must have at least 2 options.');
+              return;
+            }
+            q.options.splice(oi, 1);
+            // ensure at least one remains correct
+            if (!q.options.some(o => o.correct)) q.options[0].correct = true;
+            render();
+          });
+
+          row.appendChild(radio);
+          row.appendChild(txt);
+          row.appendChild(optDel);
+          opts.appendChild(row);
+        });
+
+        // Add option button
+        const addOptBtn = document.createElement('button');
+        addOptBtn.className = 'btn-ghost';
+        addOptBtn.textContent = '+ Add Option';
+        addOptBtn.addEventListener('click', () => {
+          if (q.options.length >= 6) {
+            alert('Max 6 options');
+            return;
+          }
+          const newOpt = { id: getUid(), text: `Option ${q.options.length + 1}`, correct: false };
+          q.options.push(newOpt);
+          render();
+        });
+
+        // assemble card
+        card.appendChild(head);
+        card.appendChild(qtext);
+        card.appendChild(imgSection);
+        card.appendChild(opts);
+        card.appendChild(addOptBtn);
+
+        qContainer.appendChild(card);
+      });
+    }
+
+    // actions
+    addQBtn.addEventListener('click', () => {
+      quiz.questions.push(makeEmptyQuestion());
+      render();
+      // scroll to last
+      setTimeout(() => {
+        const cards = qContainer.querySelectorAll('.qcard');
+        if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      
+  quiz.title = titleInput.value.trim();
+  quiz.description = descInput.value.trim();
+
+  if (!quiz.title) {
+    alert('Quiz title is required.');
+    return;
+  }
+
+  // Convert model to backend-friendly JSON
+  const payload = {
+    title: quiz.title,
+    description: quiz.description,
+    questions: quiz.questions.map(q => ({
+      questionText: q.text,
+      imageLink: q.imageUrl || null,
+      options: q.options.map(o => ({
+        optionText: o.text,
+        isCorrect: !!o.correct
+      }))
+    }))
+  };
+
+  try {
+    const user = getAuth().currentUser;
+    if (!user) {
+      alert('You must be logged in to save the quiz.');
+      return;
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await fetch('http://localhost:5046/api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // <-- Firebase token
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Error from backend:', text);
+      alert('Failed to save quiz: ' + response.status);
+      return;
+    }
+
+    const result = await response.json();
+    console.log('Quiz saved:', result);
+    alert('Quiz saved successfully!');
+  } catch (err) {
+    console.error(err);
+    alert('Unexpected error while saving quiz.');
+  }
+});
+
+
+    titleInput.addEventListener('input', (e) => {
+      quiz.title = e.target.value;
+    });
+
+    descInput.addEventListener('input', (e) => {
+      quiz.description = e.target.value;
+    });
+
+    // init with one question
+    quiz.questions.push(makeEmptyQuestion());
+    render(); <!--Fix it and send to backend-->
+  </script>
+</body>
+</html>

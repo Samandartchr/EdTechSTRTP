@@ -1,0 +1,52 @@
+#menu {
+    background-color: #eeeeee;
+    width: 15dvw;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;}
+
+.sidebar-button {
+    width: 100%;
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 16px;
+}
+
+.sidebar-button:hover {
+    background-color: #c0c0c0;
+}
+
+.contents {
+    margin-left: 15dvw;
+    padding: 20px;
+}
+
+#settingsForm {
+    background: #fff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.profile-img {
+    display: block;
+    margin: 10px auto;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ccc;
+}
+
+#AddCourse {
+    position: relative;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+}

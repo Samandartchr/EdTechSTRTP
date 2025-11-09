@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>EdTech startup</title>
+</head>
+
+<body>
+  <h2>Auth Demo</h2>
+
+  <button onclick="toggleForm('register')">Register</button>
+  <button onclick="toggleForm('login')">Login</button>
+
+  <!-- Register -->
+  <div id="registerForm" style="display:none;">
+    <h3>Register</h3>
+    <input type="email" id="regEmail" placeholder="Email"><br>
+    <input type="password" id="regPassword" placeholder="Password"><br>
+    <label for="regRole">Role:</label>
+    <select id="regRole">
+    <option value="student" selected>Student</option>
+    <option value="creator">Creator</option>
+    </select><br>
+    <button onclick="register()">Submit</button>
+  </div>
+
+  <!-- Login -->
+  <div id="loginForm" style="display:none;">
+    <h3>Login</h3>
+    <input type="email" id="logEmail" placeholder="Email"><br>
+    <input type="password" id="logPassword" placeholder="Password"><br>
+    <button onclick="login()">Submit</button>
+  </div>
+
+<script type="module" src="scripts/auth.js"></script>
+</body>
+</html>

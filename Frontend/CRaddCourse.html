@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Add Course</title>
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <div style="padding: 20px;">
+    <form id="add-course-form">
+        <label for="course-title">Course Title:</label><br>
+        <input type="text" id="course-title" name="course-title" required><br>
+
+        <label for="course-image">Course Image:</label><br>
+        <input type="file" id="course-image" name="course-image" accept="image/*" required><br>
+
+        <label for="course-description">Course Description:</label><br>
+        <textarea id="course-description" name="course-description" required></textarea><br>
+
+        <div id="course-content"></div>
+
+        <button type="button" onclick="AddContent()">Add</button>
+        <select id="content-type">
+            <option value="lesson">Lesson</option>
+            <option value="quiz">Quiz</option>
+        </select>
+        <br>
+        <button type="submit">Create Course</button>
+    </form>
+  </div>
+
+  <script type="module" src="scripts/auth.js"></script>
+  <script src="scripts/AddCourse.js"></script>
+</body>
+</html>

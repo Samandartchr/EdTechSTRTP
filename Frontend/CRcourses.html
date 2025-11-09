@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Creator Home</title>
+  <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+  <div id="menu">
+    <button class="sidebar-button" onclick="window.location.href='CRhome.html'">Home</button>
+    <button class="sidebar-button" onclick="window.location.href='CRsettings.html'">Settings</button>
+    <button class="sidebar-button" style="background-color: lightgray;">Courses</button>
+    <button class="sidebar-button">Metrics</button>
+  </div>
+
+  <div class="contents">
+    <button id="AddCourse" /*onclick="window.location.href='CRaddCourse.html'"*/>+ Add course</button>
+    <div>
+      <button id="show-drafts">Drafts</button>
+      <button id="show-published">Published</button>
+    </div>
+
+    <div id="drafts">
+      <!-- draft courses go here -->
+      <p>Draft course list...</p>
+    </div>
+
+    <div id="published" style="display:none;">
+      <!-- published courses go here -->
+      <p>Published course list...</p>
+    </div>
+  </div>
+  <div id="courseModal" style="
+  display: none;
+  position: fixed;
+  bottom: 100px;
+  right: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+  padding: 20px;
+  width: 300px;
+">
+  <h3>Add Course</h3>
+  <input id="titleInput" type="text" placeholder="Course Title" style="width:100%; margin-bottom:10px;">
+  <textarea id="descInput" placeholder="Course Description" style="width:100%; height:80px;"></textarea>
+  <button id="saveCourseBtn" style="margin-top:10px; background-color:#28a745; color:white; width:100%;">Save</button>
+</div>
+
+  <script type="module" src="scripts/auth.js"></script>
+  <script src="scripts/courses.js"></script>
+
+  <script type="module">
+  import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+  const addBtn = document.getElementById("AddCourse");
+  const modal = document.getElementById("courseModal");
+  const saveBtn = document.getElementById("saveCourseBtn");
+
+  // Toggle menu
+  addBtn.onclick = () => {
+    modal.style.display = modal.style.display === "none" ? "block" : "none";
+  };
+
+  // Save course
+  saveBtn.onclick = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please sign in first!");
+      return;
+    }
+
+    const token = await user.getIdToken();
+    const title = document.getElementById("titleInput").value;
+    const description = document.getElementById("descInput").value;
+
+    const response = await fetch("http://localhost:5046/api/course/addcourse", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ title, description })
+    });
+
+    const data = await response.json();
+    alert(data.message || "Course added!");
+    modal.style.display = "none";
+  };
+</script>
+</body>
+</html>
