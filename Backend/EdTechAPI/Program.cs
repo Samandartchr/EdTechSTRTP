@@ -15,7 +15,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 FirebaseApp.Create(new AppOptions()
 {
-    Credential = GoogleCredential.FromFile("practise-d5653-firebase-adminsdk-fbsvc-ae3dbd49f7.json") // download from Firebase console
+    Credential = GoogleCredential.FromFile("practise-d5653-firebase-adminsdk-fbsvc-ae3dbd49f7.json")
 });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -38,6 +38,13 @@ builder.Services.AddScoped<FirebaseService>();
 builder.Services.AddCors(o => o.AddPolicy("AllowFrontend", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+
+// 🔥 ADD THIS: Auto-create database and tables
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated(); // This creates the database and tables
+}
 
 app.UseCors("AllowFrontend");
 app.UseAuthentication();

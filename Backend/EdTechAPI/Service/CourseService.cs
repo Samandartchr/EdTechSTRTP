@@ -14,13 +14,26 @@ namespace Services
         }
         //Add new course as draft
         public async Task<string> AddCourseAsync(Course course)
-        {
-            //Save to database
-            course.CourseID = await GenerateUniqueCourseIdAsync();
-            _context.Courses.Add(course);
-            await _context.SaveChangesAsync();
-            return course.CourseID;
-        }
+{
+    Console.WriteLine("=== AddCourseAsync called ===");
+    
+    course.CourseID = await GenerateUniqueCourseIdAsync();
+    Console.WriteLine($"Generated Course ID: {course.CourseID}");
+    Console.WriteLine($"Creator ID: {course.CreatorID}");
+    Console.WriteLine($"Title: {course.CourseTitle}");
+    Console.WriteLine($"Description: {course.CourseDescription}");
+    Console.WriteLine($"Image URL: {course.CourseImageURL}");
+    Console.WriteLine($"Content URL: {course.CourseContentURL}");
+    Console.WriteLine($"Is Published: {course.IsPublished}");
+    
+    _context.Courses.Add(course);
+    Console.WriteLine("Course added to context");
+    
+    var changes = await _context.SaveChangesAsync();
+    Console.WriteLine($"SaveChanges result: {changes} rows affected");
+    
+    return course.CourseID;
+}
 
         public async Task<string> GenerateUniqueCourseIdAsync()
         {
