@@ -1,6 +1,8 @@
 using Domains;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using FirebaseAdmin;
+using FirebaseAdmin.Auth;
 
 namespace Services
 {
@@ -15,22 +17,12 @@ namespace Services
         //Add new course as draft
         public async Task<string> AddCourseAsync(Course course)
 {
-    Console.WriteLine("=== AddCourseAsync called ===");
     
     course.CourseID = await GenerateUniqueCourseIdAsync();
-    Console.WriteLine($"Generated Course ID: {course.CourseID}");
-    Console.WriteLine($"Creator ID: {course.CreatorID}");
-    Console.WriteLine($"Title: {course.CourseTitle}");
-    Console.WriteLine($"Description: {course.CourseDescription}");
-    Console.WriteLine($"Image URL: {course.CourseImageURL}");
-    Console.WriteLine($"Content URL: {course.CourseContentURL}");
-    Console.WriteLine($"Is Published: {course.IsPublished}");
-    
+
     _context.Courses.Add(course);
-    Console.WriteLine("Course added to context");
     
     var changes = await _context.SaveChangesAsync();
-    Console.WriteLine($"SaveChanges result: {changes} rows affected");
     
     return course.CourseID;
 }
@@ -57,5 +49,28 @@ namespace Services
             }
             return new string(buffer);
         }
+
+// ... setup and initialization of FirebaseApp.DefaultInstance ...
+
+public async Task<string> GetUidFromIdToken(string idToken)
+{
+    try
+    {
+        // VerifyIdTokenAsync checks the token's signature, issuer, and expiration time.
+        // It returns a decoded token object.
+        FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance
+            .VerifyIdTokenAsync(idToken);
+            
+        // The UID is available in the decoded token object.
+        string uid = decodedToken.Uid;
+        return uid; 
+    }
+    catch (FirebaseAuthException e)
+    {
+        // Handle token errors (e.g., token expired, invalid signature)
+        Console.WriteLine($"Token verification error: {e.Message}");
+        return null;
+    }
+}
     }
 }

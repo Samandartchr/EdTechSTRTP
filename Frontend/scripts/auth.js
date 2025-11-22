@@ -19,7 +19,7 @@
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    export const auth = getAuth(app);
     const db = getFirestore(app);
 
     // Toggle UI
@@ -48,31 +48,37 @@
 
     // Login
     async function login() {
-      const email = document.getElementById("logEmail").value;
-      const password = document.getElementById("logPassword").value;
+  const email = document.getElementById("logEmail").value;
+  const password = document.getElementById("logPassword").value;
 
-      const auth = getAuth();
-      const user = auth.currentUser;
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-      try {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        if (userCred.user.emailVerified && user) {
-          const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
-          const role = userDoc.data().role;
-          localStorage.setItem("userRole", role);
-          localStorage.setItem("userEmail", email);
+    // After login, currentUser is available
+    const user = auth.currentUser;
 
-          if (role == "creator") {window.location.href = "CRhome.html";}
-          if (role == "student") {window.location.href = "SThome.html";}
-
-        } else {
-          alert("Please verify your email first!");
-        }
-      } catch (error) {
-        alert(error.message);
-      }
+    if (!user.emailVerified) {
+      alert("Please verify your email first!");
+      return;
     }
-    window.login = login;
+
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const role = userDoc.data().role;
+
+    // Save data locally
+    localStorage.setItem("userRole", role);
+    localStorage.setItem("userEmail", email);
+
+    // Redirect based on role
+    if (role === "creator") window.location.href = "CRhome.html";
+    if (role === "student") window.location.href = "SThome.html";
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+window.login = login;
+
 
     // Logout
     function logout() {
@@ -90,14 +96,13 @@ window.logout = logout;
 
 async function getToken() {
   const user = auth.currentUser;
-  if (user) {
-    const token = await user.getIdToken(); // <-- This is the Firebase ID token (JWT)
-    console.log("User token:", token);
-    return token;
-  } else {
+  if (!user) {
     console.log("No user signed in");
     return null;
   }
+  
+  const token = await user.getIdToken();
+  return token;
 }
 
 // Example usage: const token = await user.getIdToken(true);

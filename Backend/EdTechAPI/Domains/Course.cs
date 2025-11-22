@@ -33,7 +33,7 @@ namespace Domains
 
         [Column("is_published")]
         [JsonPropertyName("ispublished")]
-        public int IsPublished { get; set; }
+        public Boolean IsPublished { get; set; }
 
         [Column("course_size_bytes")]
         [JsonPropertyName("coursesizebytes")]

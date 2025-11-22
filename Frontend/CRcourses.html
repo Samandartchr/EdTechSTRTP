@@ -14,7 +14,7 @@
   </div>
 
   <div class="contents">
-    <button id="AddCourse" /*onclick="window.location.href='CRaddCourse.html'"*/>+ Add course</button>
+    <button id="AddCourse">+ Add course</button>
     <div>
       <button id="show-drafts">Drafts</button>
       <button id="show-published">Published</button>
@@ -47,31 +47,35 @@
   <button id="saveCourseBtn" style="margin-top:10px; background-color:#28a745; color:white; width:100%;">Save</button>
 </div>
 
-  <script type="module" src="scripts/auth.js"></script>
-  <script src="scripts/courses.js"></script>
-
-  <script type="module">
-  import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+<script type="module" src="scripts/auth.js"></script>
+<script type="module">
+  import { auth } from "./scripts/auth.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
   const addBtn = document.getElementById("AddCourse");
   const modal = document.getElementById("courseModal");
   const saveBtn = document.getElementById("saveCourseBtn");
 
-  // Toggle menu
+  let user = null;
+
+  // Listen for auth state
+  onAuthStateChanged(auth, (u) => {
+    user = u;
+    console.log("Auth state updated:", user);
+  });
+
   addBtn.onclick = () => {
     modal.style.display = modal.style.display === "none" ? "block" : "none";
   };
 
-  // Save course
   saveBtn.onclick = async () => {
-    const auth = getAuth();
-    const user = auth.currentUser;
     if (!user) {
       alert("Please sign in first!");
       return;
     }
 
     const token = await user.getIdToken();
+
     const title = document.getElementById("titleInput").value;
     const description = document.getElementById("descInput").value;
 
@@ -82,18 +86,14 @@
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-  coursetitle: title,
-  coursedescription: description,
-  courseimageurl: "sss",
-  coursecontenturl: "sss",
-  coursesizebytes: 0,
-  coursetype: "private",
-  ispublished: 2,
-  courseid: "efgrbhgn",
-  creatorid: "ffffffff"
-})
-
-
+        coursetitle: title,
+        coursedescription: description,
+        courseimageurl: "sss",
+        coursecontenturl: "sss",
+        coursesizebytes: 0,
+        coursetype: "private",
+        ispublished: false
+      })
     });
 
     const data = await response.json();
@@ -101,5 +101,7 @@
     modal.style.display = "none";
   };
 </script>
+
+
 </body>
 </html>
