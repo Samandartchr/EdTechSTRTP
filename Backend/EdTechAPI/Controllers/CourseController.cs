@@ -9,6 +9,8 @@ using System;
 using FirebaseAdmin;
 using Google.Cloud.Firestore;
 using FirebaseAdmin.Auth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Controllers
 {
@@ -16,23 +18,32 @@ namespace Controllers
     [Route("api/[controller]")]
     public class CourseController : ControllerBase
     {
+        private readonly FirebaseAuth _firebaseAuth;
         public readonly CourseService _courseService;
-        public CourseController(CourseService courseService)
+        public CourseController(CourseService courseService, FirebaseAuth firebaseAuth)
         {
             _courseService = courseService;
+            _firebaseAuth = firebaseAuth;
         }
 
         [HttpPost("addcourse")]
+        [Authorize(AuthenticationSchemes =JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> AddCourse([FromBody] Course course)
         {
             try
             {
-                var token = Request.Headers["Authorization"].ToString();
-                var rawToken = token.Replace("Bearer ", "");
-                string uid = await _courseService.GetUidFromIdToken(rawToken);
+                var authHeader = HttpContext.Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                {
+                    return Unauthorized(new { Message = "Authorization header is missing or invalid" });
+                }
+
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                FirebaseToken decodedToken = await _firebaseAuth.VerifyIdTokenAsync(token);
+                string uid = decodedToken.Uid;
                 course.CreatorID = uid;
         
-                string courseid = await _courseService.AddCourseAsync(course);
+                string CourseID = await _courseService.AddCourseAsync(course);
                 return Ok(new { Message = "Course added successfully" });
             }
     

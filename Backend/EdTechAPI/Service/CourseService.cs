@@ -9,23 +9,26 @@ namespace Services
     public class CourseService
     {
         private readonly AppDbContext _context;
-        private static readonly Random _random = new();
+        public static readonly Random _random = new();
         public CourseService(AppDbContext context)
         {
             _context = context;
         }
         //Add new course as draft
         public async Task<string> AddCourseAsync(Course course)
-{
-    
-    course.CourseID = await GenerateUniqueCourseIdAsync();
+        {
+            bool exists = await CourseIdExistsAsync(course.CourseID);
+            if (exists)
+            {
+                throw new Exception("CourseID already exists");
+            }
 
-    _context.Courses.Add(course);
+            _context.Courses.Add(course);
     
-    var changes = await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
     
-    return course.CourseID;
-}
+            return course.CourseID;
+        }
 
         public async Task<string> GenerateUniqueCourseIdAsync()
         {
@@ -39,7 +42,7 @@ namespace Services
             return courseId;
         }
 
-        private static string GenerateRandomString(int length)
+        public static string GenerateRandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
             var buffer = new char[length];
@@ -50,27 +53,9 @@ namespace Services
             return new string(buffer);
         }
 
-// ... setup and initialization of FirebaseApp.DefaultInstance ...
-
-public async Task<string> GetUidFromIdToken(string idToken)
-{
-    try
-    {
-        // VerifyIdTokenAsync checks the token's signature, issuer, and expiration time.
-        // It returns a decoded token object.
-        FirebaseToken decodedToken = await FirebaseAuth.DefaultInstance
-            .VerifyIdTokenAsync(idToken);
-            
-        // The UID is available in the decoded token object.
-        string uid = decodedToken.Uid;
-        return uid; 
-    }
-    catch (FirebaseAuthException e)
-    {
-        // Handle token errors (e.g., token expired, invalid signature)
-        Console.WriteLine($"Token verification error: {e.Message}");
-        return null;
-    }
-}
+        public async Task<bool> CourseIdExistsAsync(string courseId)
+        {
+            return await _context.Courses.AsNoTracking().AnyAsync(c => c.CourseID == courseId);
+        }
     }
 }

@@ -68,38 +68,77 @@
     modal.style.display = modal.style.display === "none" ? "block" : "none";
   };
 
+  function cryptoRandomString36(length) {
+    const array = new Uint8Array(length);
+    window.crypto.getRandomValues(array);
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        // Map each byte to 0–35
+        result += (array[i] % 36).toString(36);
+    }
+    return result;
+}
+
   saveBtn.onclick = async () => {
     if (!user) {
       alert("Please sign in first!");
       return;
     }
 
-    const token = await user.getIdToken();
+    const token = await auth.currentUser.getIdToken();
 
     const title = document.getElementById("titleInput").value;
     const description = document.getElementById("descInput").value;
+    
+    async function fetching() {
+    const courseid = cryptoRandomString36(10);
 
-    const response = await fetch("http://localhost:5046/api/course/addcourse", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
+    const payload = {
         coursetitle: title,
         coursedescription: description,
         courseimageurl: "sss",
         coursecontenturl: "sss",
         coursesizebytes: 0,
         coursetype: "private",
-        ispublished: false
-      })
-    });
+        ispublished: false,
+        courseid: courseid,
+        creatorid: ""
+    };
 
+    let attempt = 0;
+    let response;
+
+    while (attempt < 3) {
+        attempt++;
+
+        response = await fetch("http://localhost:5046/api/course/addcourse", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) return response;     // success → exit loop
+    }
+
+    return response; // last failed response
+}
+
+
+    const response = await fetching();
     const data = await response.json();
-    alert(data.message || "Course added!");
+
+    if (response.ok) {
+    alert("Course added successfully!");
     modal.style.display = "none";
-  };
+    document.getElementById("titleInput").value = "";
+    document.getElementById("descInput").value = "";
+  } else {
+    alert("Error: " + (data.message || data.error || "Failed to add course"));
+  }
+};
 </script>
 
 

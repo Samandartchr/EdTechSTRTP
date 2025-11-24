@@ -1,15 +1,17 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace Domains
 {
     [Table("course_list")]
     public class Course
     {
+        [Key]
         [Column("course_id")]
         [JsonPropertyName("courseid")]
-        public string CourseID { get; set; }
+        public required string CourseID { get; set; }
 
         [Column("creator_id")]
         [JsonPropertyName("creatorid")]

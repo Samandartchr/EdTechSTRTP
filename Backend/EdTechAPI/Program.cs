@@ -6,26 +6,50 @@ using Microsoft.IdentityModel.Tokens;
 using Infrastructure;
 using Domains;
 using Services;
+using FirebaseAdmin.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
+var serviceAccountPath = builder.Configuration["Firebase:ServiceAccountPath"];
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
+
+if (FirebaseApp.DefaultInstance == null)
+{
+    FirebaseApp.Create(new AppOptions()
+    {
+        Credential = GoogleCredential.FromFile(serviceAccountPath),
+        ProjectId = firebaseProjectId
+    });
+}
+
+// Register FirebaseAuth as a singleton
+builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
+
 builder.Services.AddScoped<CourseService>();
 builder.Services.AddCors(o => o.AddPolicy("AllowFrontend", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
-
-var firebaseProjectId = builder.Configuration["Firebase:ProjectId"];
-var serviceAccountPath = builder.Configuration["Firebase:ServiceAccountPath"];
-
-FirebaseApp.Create(new AppOptions() {
-    Credential = GoogleCredential.FromFile(serviceAccountPath),
-    ProjectId = firebaseProjectId
-});
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = "https://securetoken.google.com/" + firebaseProjectId;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "https://securetoken.google.com/" + firebaseProjectId,
+            ValidateAudience = true,
+            ValidAudience = firebaseProjectId,
+            ValidateLifetime = true
+        };
+    });
+builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
+app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
