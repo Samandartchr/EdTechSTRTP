@@ -7,6 +7,8 @@ using Infrastructure;
 using Domains;
 using Services;
 using FirebaseAdmin.Auth;
+using Google.Cloud.Firestore;
+using Google.Cloud.Firestore.V1;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +31,19 @@ if (FirebaseApp.DefaultInstance == null)
 
 // Register FirebaseAuth as a singleton
 builder.Services.AddSingleton(FirebaseAuth.DefaultInstance);
+/*builder.Services.AddSingleton(provider =>
+{
+    return FirestoreDb.Create(firebaseProjectId);
+});*/
+var firestoreBuilder = new FirestoreClientBuilder
+{
+    Credential = GoogleCredential.FromFile(serviceAccountPath)
+};
+var firestoreClient = firestoreBuilder.Build();
+builder.Services.AddSingleton(_ => FirestoreDb.Create(firebaseProjectId, firestoreClient));
 
 builder.Services.AddScoped<CourseService>();
+
 builder.Services.AddCors(o => o.AddPolicy("AllowFrontend", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

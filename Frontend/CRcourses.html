@@ -23,12 +23,14 @@
     <div id="drafts">
       <!-- draft courses go here -->
       <p>Draft course list...</p>
+      
     </div>
 
     <div id="published" style="display:none;">
       <!-- published courses go here -->
       <p>Published course list...</p>
     </div>
+</div>
   </div>
   <div id="courseModal" style="
   display: none;
@@ -47,6 +49,7 @@
   <button id="saveCourseBtn" style="margin-top:10px; background-color:#28a745; color:white; width:100%;">Save</button>
 </div>
 
+
 <script type="module" src="scripts/auth.js"></script>
 <script type="module">
   import { auth } from "./scripts/auth.js";
@@ -55,10 +58,31 @@
   const addBtn = document.getElementById("AddCourse");
   const modal = document.getElementById("courseModal");
   const saveBtn = document.getElementById("saveCourseBtn");
+  const draftsBtn = document.getElementById("show-drafts");
+  const publishedBtn = document.getElementById("show-published");
+  const courseCard = `<div class="card-container">
+            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop" alt="Mountain Landscape" class="card-image">
+            <div class="card-content">
+                <h2 class="card-title">Mountain Adventure</h2>
+                <div class="card-buttons">
+                    <button class="btn btn-edit" onclick="handleEdit(1)">Edit</button>
+                    <button class="btn btn-details" onclick="openOverlay(1)">Details</button>
+                </div>
+            </div>
+        </div>`;
+
+
+  draftsBtn.onclick = () => {
+    document.getElementById("drafts").style.display = "block";
+    document.getElementById("published").style.display = "none";
+  };
+
+  publishedBtn.onclick = () => {
+    document.getElementById("drafts").style.display = "none";
+    document.getElementById("published").style.display = "block";
+  };
 
   let user = null;
-
-  // Listen for auth state
   onAuthStateChanged(auth, (u) => {
     user = u;
     console.log("Auth state updated:", user);
@@ -67,17 +91,6 @@
   addBtn.onclick = () => {
     modal.style.display = modal.style.display === "none" ? "block" : "none";
   };
-
-  function cryptoRandomString36(length) {
-    const array = new Uint8Array(length);
-    window.crypto.getRandomValues(array);
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        // Map each byte to 0–35
-        result += (array[i] % 36).toString(36);
-    }
-    return result;
-}
 
   saveBtn.onclick = async () => {
     if (!user) {
@@ -91,18 +104,11 @@
     const description = document.getElementById("descInput").value;
     
     async function fetching() {
-    const courseid = cryptoRandomString36(10);
+    //const courseid = cryptoRandomString36(10);
 
     const payload = {
         coursetitle: title,
         coursedescription: description,
-        courseimageurl: "sss",
-        coursecontenturl: "sss",
-        coursesizebytes: 0,
-        coursetype: "private",
-        ispublished: false,
-        courseid: courseid,
-        creatorid: ""
     };
 
     let attempt = 0;
@@ -139,8 +145,9 @@
     alert("Error: " + (data.message || data.error || "Failed to add course"));
   }
 };
+
+
+
 </script>
-
-
 </body>
 </html>

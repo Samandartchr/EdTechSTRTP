@@ -1,5 +1,6 @@
 using Infrastructure;
 using Domains;
+using DTOs;
 using Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
@@ -27,8 +28,8 @@ namespace Controllers
         }
 
         [HttpPost("addcourse")]
-        [Authorize(AuthenticationSchemes =JwtBearerDefaults.AuthenticationScheme)]
-        public async Task<IActionResult> AddCourse([FromBody] Course course)
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        public async Task<IActionResult> AddCourse([FromBody] AddCourseDto addCourseDto)
         {
             try
             {
@@ -41,10 +42,10 @@ namespace Controllers
                 var token = authHeader.Substring("Bearer ".Length).Trim();
                 FirebaseToken decodedToken = await _firebaseAuth.VerifyIdTokenAsync(token);
                 string uid = decodedToken.Uid;
-                course.CreatorID = uid;
+
         
-                string CourseID = await _courseService.AddCourseAsync(course);
-                return Ok(new { Message = "Course added successfully" });
+                string CourseID = await _courseService.AddCourseAsync(addCourseDto, uid);
+                return Ok(new { Message = "Course added successfully"});
             }
     
             catch (Exception ex)
