@@ -44,7 +44,8 @@ namespace Services
             course.IsPublished = false;
             course.CourseType = "private";
 
-            string defImageLink = Path.Combine(StorageContext.DefaultsPath, "DefaultCourseImage.jpeg");
+            string defImageLink = Path.Combine(@"C:\Users\Admin\OneDrive\Desktop\Универ\EdTechSTRTP\Backend\AppStorage\Defaults", "DefaultCourseImage.jpeg");
+            //string defImageLink = "gffdds";
             course.CourseImageURL = defImageLink;
 
             var data = new Dictionary<string, object>
@@ -96,6 +97,21 @@ namespace Services
             return new string(buffer);
         }
 
-        
+        public async Task<List<CourseCardDto>> GetCoursesByCreatorIdAsync(string creatorId)
+        {
+            var courses = await _context.Courses
+                .AsNoTracking()
+                .Where(c => c.CreatorID == creatorId)
+                .Select(c => new CourseCardDto
+                {
+                    CourseId = c.CourseID,
+                    Title = c.CourseTitle,
+                    CourseImage = Convert.ToBase64String(File.ReadAllBytes(c.CourseImageURL)),
+                    IsPublished = c.IsPublished
+                })
+                .ToListAsync();
+
+            return courses;
+        }
     }
 }

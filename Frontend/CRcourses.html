@@ -20,13 +20,13 @@
       <button id="show-published">Published</button>
     </div>
 
-    <div id="drafts">
+    <div id="drafts" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; margin-top: 20px;">
       <!-- draft courses go here -->
       <p>Draft course list...</p>
       
     </div>
 
-    <div id="published" style="display:none;">
+    <div id="published" style="display: grid; display: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; margin-top: 20px;">
       <!-- published courses go here -->
       <p>Published course list...</p>
     </div>
@@ -52,102 +52,340 @@
 
 <script type="module" src="scripts/auth.js"></script>
 <script type="module">
-  import { auth } from "./scripts/auth.js";
-  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+  // Replace the entire <script type="module"> section with this:
 
-  const addBtn = document.getElementById("AddCourse");
-  const modal = document.getElementById("courseModal");
-  const saveBtn = document.getElementById("saveCourseBtn");
-  const draftsBtn = document.getElementById("show-drafts");
-  const publishedBtn = document.getElementById("show-published");
-  const courseCard = `<div class="card-container">
-            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop" alt="Mountain Landscape" class="card-image">
-            <div class="card-content">
-                <h2 class="card-title">Mountain Adventure</h2>
-                <div class="card-buttons">
-                    <button class="btn btn-edit" onclick="handleEdit(1)">Edit</button>
-                    <button class="btn btn-details" onclick="openOverlay(1)">Details</button>
-                </div>
-            </div>
-        </div>`;
+import { auth } from "./scripts/auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
+const addBtn = document.getElementById("AddCourse");
+const modal = document.getElementById("courseModal");
+const saveBtn = document.getElementById("saveCourseBtn");
+const draftsBtn = document.getElementById("show-drafts");
+const publishedBtn = document.getElementById("show-published");
 
-  draftsBtn.onclick = () => {
-    document.getElementById("drafts").style.display = "block";
-    document.getElementById("published").style.display = "none";
+// Tab switching logic
+draftsBtn.onclick = () => {
+  document.getElementById("drafts").style.display = "grid";
+  document.getElementById("published").style.display = "none";
+  draftsBtn.style.backgroundColor = "lightgray";
+  publishedBtn.style.backgroundColor = "";
+};
+
+publishedBtn.onclick = () => {
+  document.getElementById("drafts").style.display = "none";
+  document.getElementById("published").style.display = "grid";
+  publishedBtn.style.backgroundColor = "lightgray";
+  draftsBtn.style.backgroundColor = "";
+};
+
+let user = null;
+onAuthStateChanged(auth, (u) => {
+  user = u;
+  console.log("Auth state updated:", user);
+  if (user){
+    loadCourses();
+  }
+});
+
+addBtn.onclick = () => {
+  modal.style.display = modal.style.display === "none" ? "block" : "none";
+};
+
+// MOVED OUTSIDE - Helper functions to render cards
+function renderCard(collectionid, title, imageLink, courseid, ispublished) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.id = courseid;
+  card.style.overflow = "hidden";
+  card.style.display = "flex";
+  card.style.flexDirection = "column";
+  card.style.backgroundColor = "white";
+  card.style.borderRadius = "12px";
+  card.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+
+  const img = document.createElement("img");
+  img.src = getImageSrc(imageLink);
+  img.style.width = "100%";
+  img.style.height = "150px";
+  img.style.objectFit = "cover";
+  img.onerror = function() {
+    // Fallback to a placeholder if image fails to load
+    this.src = 'https://via.placeholder.com/150?text=No+Image';
   };
+  card.appendChild(img);
 
-  publishedBtn.onclick = () => {
-    document.getElementById("drafts").style.display = "none";
-    document.getElementById("published").style.display = "block";
+  const cardContent = document.createElement("div");
+  cardContent.style.padding = "15px";
+  cardContent.style.display = "flex";
+  cardContent.style.flexDirection = "column";
+  cardContent.style.gap = "10px";
+  cardContent.className = "card-content";
+
+  const cardTitle = document.createElement("h2");
+  cardTitle.className = "card-title";
+  cardTitle.textContent = title;
+  cardTitle.style.fontSize = "1.1rem";
+  cardTitle.style.margin = "0";
+  cardContent.appendChild(cardTitle);
+
+  const cardButtons = document.createElement("div");
+  cardButtons.style.display = "flex";
+  cardButtons.style.gap = "8px";
+  cardButtons.className = "card-buttons";
+
+  if (!ispublished) {
+  const editBtn = document.createElement("button");
+  editBtn.style.flex = "1";
+  editBtn.style.padding = "8px 12px";
+  editBtn.style.border = "none";
+  editBtn.style.borderRadius = "6px";
+  editBtn.style.cursor = "pointer";
+  editBtn.style.backgroundColor = "#f0f0f0";
+  editBtn.className = "btn";
+  editBtn.textContent = "Edit";
+  editBtn.onclick = () => editCourse(courseid);
+  cardButtons.appendChild(editBtn);
+} else {
+  const viewBtn = document.createElement("button");
+  viewBtn.style.flex = "1";
+  viewBtn.style.padding = "8px 12px";
+  viewBtn.style.border = "none";
+  viewBtn.style.borderRadius = "6px";
+  viewBtn.style.cursor = "pointer";
+  viewBtn.style.backgroundColor = "#f0f0f0";
+  viewBtn.className = "btn";
+  viewBtn.textContent = "View";
+  viewBtn.onclick = () => viewCourse(courseid);
+  cardButtons.appendChild(viewBtn);
+}
+
+  const detailsBtn = document.createElement("button");
+  detailsBtn.style.flex = "1";
+  detailsBtn.style.padding = "8px 12px";
+  detailsBtn.style.border = "none";
+  detailsBtn.style.borderRadius = "6px";
+  detailsBtn.style.cursor = "pointer";
+  detailsBtn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  detailsBtn.style.color = "white";
+  detailsBtn.className = "btn";
+  detailsBtn.textContent = "Details";
+  detailsBtn.onclick = () => openOverlay(courseid);
+  cardButtons.appendChild(detailsBtn);
+
+  cardContent.appendChild(cardButtons);
+  card.appendChild(cardContent);
+
+  const container = document.getElementById(collectionid);
+  // Remove "no courses" message if it exists
+  const placeholder = container.querySelector('p');
+  if (placeholder) placeholder.remove();
+  
+  container.appendChild(card);
+}
+
+function getImageSrc(imageLink) {
+  // If it's already a valid URL (http/https), use it directly
+  if (imageLink.startsWith('http://') || imageLink.startsWith('https://')) {
+    return imageLink;
+  }
+  
+  // If it's already a data URI, use it directly
+  if (imageLink.startsWith('data:')) {
+    return imageLink;
+  }
+  
+  // Otherwise, treat it as base64 and detect the format
+  // Check the first few bytes to determine image type
+  const imageType = detectImageType(imageLink);
+  return `data:${imageType};base64,${imageLink}`;
+}
+
+function detectImageType(base64String) {
+  // Get the first few characters to check the magic bytes
+  const signatures = {
+    '/9j/': 'image/jpeg',  // JPEG
+    'iVBOR': 'image/png',  // PNG
+    'R0lGO': 'image/gif',  // GIF
+    'UklGR': 'image/webp', // WebP
+    'Qk': 'image/bmp',     // BMP
+    'PHN2Zy': 'image/svg+xml', // SVG
   };
+  
+  for (const [signature, mimeType] of Object.entries(signatures)) {
+    if (base64String.startsWith(signature)) {
+      return mimeType;
+    }
+  }
+  
+  // Default to JPEG if we can't detect
+  return 'image/jpeg';
+}
 
-  let user = null;
-  onAuthStateChanged(auth, (u) => {
-    user = u;
-    console.log("Auth state updated:", user);
+function renderGrid(courses) {
+  // Clear existing cards first
+  document.getElementById("drafts").innerHTML = "";
+  document.getElementById("published").innerHTML = "";
+  
+  if (courses.length === 0) {
+    document.getElementById("drafts").innerHTML = "<p>No draft courses available.</p>";
+    document.getElementById("published").innerHTML = "<p>No published courses available.</p>";
+    return;
+  }
+
+  let draftCount = 0;
+  let publishedCount = 0;
+
+  courses.forEach(course => {
+    if (course.ispublished) {
+      renderCard("published", course.coursetitle, course.courseimage, course.courseid, true);
+      publishedCount++;
+    } else {
+      renderCard("drafts", course.coursetitle, course.courseimage, course.courseid, false);
+      draftCount++;
+    }
   });
 
-  addBtn.onclick = () => {
-    modal.style.display = modal.style.display === "none" ? "block" : "none";
-  };
+  // Add placeholder messages if no courses in a category
+  if (draftCount === 0) {
+    document.getElementById("drafts").innerHTML = "<p>No draft courses available.</p>";
+  }
+  if (publishedCount === 0) {
+    document.getElementById("published").innerHTML = "<p>No published courses available.</p>";
+  }
+}
 
-  saveBtn.onclick = async () => {
-    if (!user) {
-      alert("Please sign in first!");
-      return;
+// Placeholder functions (implement these later)
+function editCourse(courseid) {
+  alert(`Edit course: ${courseid}`);
+}
+
+function openOverlay(courseid) {
+  alert(`Open details for course: ${courseid}`);
+}
+
+function viewCourse(courseid) {
+  alert(`View course: ${courseid}`);
+}
+
+// Test data
+/*const testCourses = [
+  {
+    courseid: "c1",
+    coursetitle: "Physics 101",
+    courseimage: "https://praxilabs.com/en/blog/wp-content/uploads/2025/07/Important-Physics-Equations-in-History-1.webp",
+    ispublished: true
+  },
+  {
+    courseid: "c2",
+    coursetitle: "Chemistry Basics",
+    courseimage: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrOoeQHJSdJ2b3B_HI0wGwPltqVe1Y-vSG6A&s",
+    ispublished: false
+  },
+  {
+    courseid: "c3",
+    coursetitle: "Mathematics Advanced",
+    courseimage: "https://play-lh.googleusercontent.com/2YKBU-z4u8a6DyuZagRRTcWBAfeT3LnYkAwZN681ND1TEQ_W6RSqXUgRj2zCoSXO3YRx",
+    ispublished: true
+  },
+  {
+    courseid: "c4",
+    coursetitle: "History Overview",
+    courseimage: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUfVuI-52gMsBUjICo8U71bZzPh_Sl60a0rw&s",
+    ispublished: false
+  }
+];*/
+
+async function getCourses() {
+    if (!auth.currentUser) {
+        console.error("User not authenticated");
+        return [];
     }
 
     const token = await auth.currentUser.getIdToken();
 
-    const title = document.getElementById("titleInput").value;
-    const description = document.getElementById("descInput").value;
-    
-    async function fetching() {
-    //const courseid = cryptoRandomString36(10);
+    let response;
 
+    try {
+        response = await fetch("http://localhost:5046/api/course/getcourses", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+    } catch (networkError) {
+        console.error("Network error:", networkError);
+        return [];
+    }
+
+    if (!response.ok) {
+        console.error("Server error:", response.status);
+        return [];
+    }
+
+    return await response.json(); // returns array of DTO
+}
+
+async function loadCourses() {
+  const courses = await getCourses();
+  renderGrid(courses);
+}
+
+// CALL THIS IMMEDIATELY when page loads
+//renderGrid(getCourses());
+
+// Save button handler
+saveBtn.onclick = async () => {
+  if (!user) {
+    alert("Please sign in first!");
+    return;
+  }
+
+  const token = await auth.currentUser.getIdToken();
+  const title = document.getElementById("titleInput").value;
+  const description = document.getElementById("descInput").value;
+
+  async function fetching() {
     const payload = {
-        coursetitle: title,
-        coursedescription: description,
+      coursetitle: title,
+      coursedescription: description,
     };
 
     let attempt = 0;
     let response;
 
     while (attempt < 3) {
-        attempt++;
+      attempt++;
+      response = await fetch("http://localhost:5046/api/course/addcourse", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
 
-        response = await fetch("http://localhost:5046/api/course/addcourse", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) return response;     // success → exit loop
+      if (response.ok) return response;
     }
 
-    return response; // last failed response
-}
+    return response;
+  }
 
+  const response = await fetching();
+  const data = await response.json().catch(() => ({}));
 
-    const response = await fetching();
-    const data = await response.json();
-
-    if (response.ok) {
+  if (response.ok) {
     alert("Course added successfully!");
     modal.style.display = "none";
     document.getElementById("titleInput").value = "";
     document.getElementById("descInput").value = "";
+    
+    // Re-fetch and re-render courses here
+    // For now, just add the new course to testCourses array
+    // In production, you'd fetch from your API
   } else {
     alert("Error: " + (data.message || data.error || "Failed to add course"));
   }
 };
-
-
-
 </script>
 </body>
 </html>
