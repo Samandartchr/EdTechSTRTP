@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Quiz Editor (MVP)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 20px; background:#f6f7fb; color:#111; }
+    .editor { max-width:900px; margin: auto; display:flex; flex-direction:column; gap:12px; }
+    input[type="text"], textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; }
+    textarea { min-height:80px; resize:vertical; }
+    .controls { display:flex; flex-direction: column; gap:8px; }
+    .questions { display:flex; flex-direction:column; gap:12px; margin-top:6px; }
+    .qcard { background:white; border-radius:8px; padding:12px; border:1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(16,24,40,0.03); }
+    .qhead { display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:10px; }
+    .qtools { display:flex; gap:6px; }
+    .qtools button { padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; cursor:pointer; }
+    .options { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .opt-row { display:flex; gap:8px; align-items:center; }
+    .opt-row input[type="text"] { flex:1; }
+    .img-preview { margin-top:8px; display:flex; gap:8px; align-items:center; }
+    .img-preview img { max-width:160px; max-height:100px; border-radius:6px; object-fit:cover; border:1px solid #e2e8f0; }
+    .small { font-size:12px; color:#666; }
+    .btn-primary { background:#0b74ff; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .btn-ghost { background:transparent; border:1px solid #cbd5e1; padding:8px 10px; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="editor" id="editor">
+    <input id="quiz-title" type="text" placeholder="Quiz title (required)" />
+    <textarea id="quiz-desc" placeholder="Quiz description (optional)"></textarea>
+
+    <div class="controls">
+      <button id="add-question" class="btn-ghost" type="button">+ Add Question</button>
+      <div style="flex:1" id="questions" class="questions"></div>
+      <button id="save-quiz-btn" class="btn-primary">Save Quiz</button>
+    </div>
+  </div>
+<button id="consolelog">log</button>
+  <script type="module">
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+const quiz = {
+  title: "",
+  description: "",
+  questions: [],
+  answers: []
+};
+
+const titleInput = document.getElementById("quiz-title");
+const descInput = document.getElementById("quiz-desc");
+const questionsDiv = document.getElementById("questions");
+document.getElementById("consolelog").onclick = () => console.log(quiz);
+
+titleInput.oninput = e => quiz.title = e.target.value;
+descInput.oninput = e => quiz.description = e.target.value;
+
+document.getElementById("add-question").onclick = () => {
+  quiz.questions.push({
+  text: "",
+  imageFile: null,
+  imageUrl: null,
+  options: [{ text: "" }, { text: "" }]
+});
+quiz.answers.push(0); // default: first option
+  render();
+};
+
+function render() {
+  questionsDiv.innerHTML = "";
+
+  quiz.questions.forEach((q, qi) => {
+    const qDiv = document.createElement("div");
+
+    const qInput = document.createElement("input");
+    qInput.placeholder = `Question ${qi + 1}`;
+    qInput.value = q.text;
+    qInput.oninput = e => q.text = e.target.value;
+
+    const optsDiv = document.createElement("div");
+
+    q.options.forEach((opt, oi) => {
+  const row = document.createElement("div");
+
+  const radio = document.createElement("input");
+  radio.type = "radio";
+  radio.name = `answer-${qi}`;
+  radio.checked = quiz.answers[qi] === oi;
+  radio.onchange = () => {
+    quiz.answers[qi] = oi;
+  };
+
+  const optInput = document.createElement("input");
+  optInput.placeholder = `Option ${oi + 1}`;
+  optInput.value = opt.text;
+  optInput.oninput = e => opt.text = e.target.value;
+
+  row.appendChild(radio);
+  row.appendChild(optInput);
+  optsDiv.appendChild(row);
+});
+
+    const addOptBtn = document.createElement("button");
+    addOptBtn.textContent = "+ Option";
+    addOptBtn.onclick = () => {
+      q.options.push({ text: "", imageFile: null, imageUrl: null });
+      render();
+    };
+
+    qDiv.appendChild(qInput);
+    qDiv.appendChild(optsDiv);
+    qDiv.appendChild(addOptBtn);
+
+    questionsDiv.appendChild(qDiv);
+  });
+}
+
+document.getElementById("save").onclick = saveQuiz;
+
+async function saveQuiz() {
+  if (!quiz.title.trim()) {
+    alert("Quiz title required");
+    return;
+  }
+
+  const payload = {
+  title: quiz.title,
+  description: quiz.description,
+  questions: quiz.questions.map(q => ({
+    questionText: q.text,
+    options: q.options.map(o => ({
+      optionText: o.text
+    }))
+  })),
+  answers: quiz.answers
+};
+
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Not authenticated");
+    return;
+  }
+
+  const token = await user.getIdToken();
+
+  const res = await fetch("http://localhost:5046/api/quiz", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    alert("Save failed");
+    return;
+  }
+
+  alert("Quiz saved");
+}
+
+// init
+quiz.questions.push({
+  text: "",
+  imageFile: null,
+  imageUrl: null,
+  options: [{ text: "" }, { text: "" }]
+});
+quiz.answers.push(0); // default: first option
+render();
+</script>
+</body>
+</html>

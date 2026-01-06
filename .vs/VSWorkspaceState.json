@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\Backend",
+    "\\Backend\\EdTechAPI",
+    "\\Backend\\EdTechAPI\\Controllers",
+    "\\Backend\\EdTechAPI\\Service"
+  ],
+  "SelectedNode": "\\Backend\\EdTechAPI\\Service\\CourseService.cs",
+  "PreviewInSolutionExplorer": false
+}

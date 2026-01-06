@@ -48,6 +48,55 @@
   <textarea id="descInput" placeholder="Course Description" style="width:100%; height:80px;"></textarea>
   <button id="saveCourseBtn" style="margin-top:10px; background-color:#28a745; color:white; width:100%;">Save</button>
 </div>
+<div id="courseOverlay" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+">
+    <div style="
+        background: white;
+        width: 420px;
+        max-width: 95%;
+        max-height: 50%;
+        border-radius: 12px;
+        box-shadow: 0 0 25px rgba(0,0,0,0.25);
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        
+    ">
+        <img id="ovImage" src="" alt="Course image" style="
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        ">
+
+        <div style="padding: 20px;">
+            <h2 id="ovTitle" style="margin-top: 0; margin-bottom: 10px; font-size: 1.4rem;"></h2>
+            <p id="ovDesc" style="margin: 0; line-height: 1.45; color: #444;"></p>
+        </div>
+
+        <button id="ovClose" style="
+            align-self: flex-end;
+            margin: 10px 15px 15px 0;
+            padding: 8px 16px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        ">Close</button>
+    </div>
+</div>
 
 
 <script type="module" src="scripts/auth.js"></script>
@@ -62,6 +111,7 @@ const modal = document.getElementById("courseModal");
 const saveBtn = document.getElementById("saveCourseBtn");
 const draftsBtn = document.getElementById("show-drafts");
 const publishedBtn = document.getElementById("show-published");
+let courses = []; // Will hold the list of courses
 
 // Tab switching logic
 draftsBtn.onclick = () => {
@@ -255,45 +305,27 @@ function renderGrid(courses) {
 }
 
 // Placeholder functions (implement these later)
-function editCourse(courseid) {
-  alert(`Edit course: ${courseid}`);
+async function editCourse(courseid) {
+  const tokenn = await auth.currentUser.getIdToken();
+  window.location.href = `CRcourseEditor.html?courseid=${courseid}`;
 }
 
 function openOverlay(courseid) {
-  alert(`Open details for course: ${courseid}`);
+  const course = courses.find(c => c.courseid === courseid);
+  if (!course){console.error("Course not found:", courseid); return;}
+  document.getElementById("ovTitle").textContent = course.coursetitle;
+  document.getElementById("ovDesc").textContent = course.coursedescription || "No description available.";
+  document.getElementById("ovImage").src = getImageSrc(course.courseimage);
+  document.getElementById("courseOverlay").style.display = "flex";
+  document.getElementById("ovClose").onclick = () => {
+    document.getElementById("courseOverlay").style.display = "none";
+  };
 }
 
 function viewCourse(courseid) {
   alert(`View course: ${courseid}`);
 }
 
-// Test data
-/*const testCourses = [
-  {
-    courseid: "c1",
-    coursetitle: "Physics 101",
-    courseimage: "https://praxilabs.com/en/blog/wp-content/uploads/2025/07/Important-Physics-Equations-in-History-1.webp",
-    ispublished: true
-  },
-  {
-    courseid: "c2",
-    coursetitle: "Chemistry Basics",
-    courseimage: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQrOoeQHJSdJ2b3B_HI0wGwPltqVe1Y-vSG6A&s",
-    ispublished: false
-  },
-  {
-    courseid: "c3",
-    coursetitle: "Mathematics Advanced",
-    courseimage: "https://play-lh.googleusercontent.com/2YKBU-z4u8a6DyuZagRRTcWBAfeT3LnYkAwZN681ND1TEQ_W6RSqXUgRj2zCoSXO3YRx",
-    ispublished: true
-  },
-  {
-    courseid: "c4",
-    coursetitle: "History Overview",
-    courseimage: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUfVuI-52gMsBUjICo8U71bZzPh_Sl60a0rw&s",
-    ispublished: false
-  }
-];*/
 
 async function getCourses() {
     if (!auth.currentUser) {
@@ -326,12 +358,9 @@ async function getCourses() {
 }
 
 async function loadCourses() {
-  const courses = await getCourses();
+  courses = await getCourses();
   renderGrid(courses);
 }
-
-// CALL THIS IMMEDIATELY when page loads
-//renderGrid(getCourses());
 
 // Save button handler
 saveBtn.onclick = async () => {

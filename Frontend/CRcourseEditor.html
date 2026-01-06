@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Course Editor</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    .top-section, .modules-section { margin-bottom: 30px; }
+    input, textarea { width: 100%; padding: 8px; margin: 5px 0; }
+    img { max-width: 200px; display: block; margin-bottom: 10px; border-radius: 8px; }
+    .module { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .module span { flex: 1; }
+    .module button { margin-left: 5px; }
+    button { cursor: pointer; padding: 6px 12px; border: none; border-radius: 6px; background: #667eea; color: white; }
+    button.remove { background: #e74c3c; }
+    button.up, button.down { background: #95a5a6; color: black; }
+    button.edit { background: #2ecc71; }
+  </style>
+</head>
+<body>
+
+<div class="top-section">
+  <h2>Edit Course</h2>
+  <label>Course Image:</label>
+  <input type="file" accept="image/*" id="courseImageInput" style="display: none;">
+  <img id="courseImagePreview" src="">
+  <button id="changeImageBtn">Set Image</button>
+  <button id="removeImageBtn">Remove</button><br>
+
+  <label>Title:</label>
+  <input type="text" id="courseTitle">
+
+  <label>Description:</label>
+  <textarea id="courseDescription" rows="4"></textarea>
+</div>
+
+<div class="modules-section">
+  <h3>Modules</h3>
+  <div id="modulesContainer"></div>
+  <button id="addModuleBtn">+ Add Module</button>
+</div>
+
+<button id="saveCourseBtn" style="margin-top:20px;">Save Course</button>
+
+<script  type="module" src="./scripts/auth.js"></script>
+<script type="module">
+  import { auth } from "./scripts/auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+let user = null;
+onAuthStateChanged(auth, (u) => {
+  user = u;
+  console.log("Auth state updated:", user);
+  if (user){
+    loadCourse();
+  }
+});
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const courseId = urlParams.get('courseid');
+
+  let course = {
+    id: courseId,
+    title: "",
+    description: "",
+    image: "",
+    modules: []
+  };
+
+  //declare ModulesID array
+  let ModulesID = [];
+  //function to generate unique module ID with 2 characters if not exists in ModulesID array
+  function generateModuleID() {
+    const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let id;
+    let tries = 0;
+    do {
+      if (tries > 5) {
+        throw new Error("Unable to generate unique module ID");
+      }
+      id = '';
+      for (let i = 0; i < 2; i++) {
+        id += characters.charAt(Math.floor(Math.random() * characters.length));
+        tries++;
+      }
+    } while (ModulesID.includes(id));
+    ModulesID.push(id);
+    return id;
+  }
+
+  const courseTitleInput = document.getElementById("courseTitle");
+  const courseDescriptionInput = document.getElementById("courseDescription");
+  const courseImageInput = document.getElementById("courseImageInput");
+  const courseImagePreview = document.getElementById("courseImagePreview");
+  const modulesContainer = document.getElementById("modulesContainer");
+
+  document.getElementById("changeImageBtn").addEventListener("click", () => courseImageInput.click());
+  // Image preview + convert to base64
+  courseImageInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+  const dataUrl = reader.result;
+  const base64 = dataUrl.split(",")[1]; // strip prefix
+  course.image = base64;
+  courseImagePreview.src = dataUrl;
+};
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("removeImageBtn")
+  .addEventListener("click", () => {
+    course.image = "";
+    courseImagePreview.src = "";
+    courseImageInput.value = ""; // important
+  });
+
+  function renderModules() {
+    modulesContainer.innerHTML = "";
+    course.modules.forEach((mod, index) => {
+      const div = document.createElement("div");
+      div.className = "module";
+
+      const span = document.createElement("span");
+      span.textContent = mod.name;
+      div.appendChild(span);
+
+      //pen button to change module name
+      const penBtn = document.createElement("button");
+      penBtn.className = "edit";
+      penBtn.textContent = "✎";
+      penBtn.onclick = () => {
+        const newName = prompt("New module name:", mod.name);
+        if (newName) {
+          mod.name = newName;
+          renderModules();
+        }
+      };
+      div.appendChild(penBtn);
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "edit";
+      editBtn.textContent = "Edit";
+      //Custom logic of edit here
+      editBtn.onclick = () => {
+        window.location.href = `CRmoduleEditor.html?courseid=${courseId}&moduleid=${mod.moduleid}`;
+      };
+      div.appendChild(editBtn);
+
+      const upBtn = document.createElement("button");
+      upBtn.className = "up";
+      upBtn.textContent = "↑";
+      upBtn.onclick = () => {
+        if (index === 0) return;
+        [course.modules[index-1], course.modules[index]] = [course.modules[index], course.modules[index-1]];
+        renderModules();
+      };
+      div.appendChild(upBtn);
+
+      const downBtn = document.createElement("button");
+      downBtn.className = "down";
+      downBtn.textContent = "↓";
+      downBtn.onclick = () => {
+        if (index === course.modules.length-1) return;
+        [course.modules[index+1], course.modules[index]] = [course.modules[index], course.modules[index+1]];
+        renderModules();
+      };
+      div.appendChild(downBtn);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove";
+      removeBtn.textContent = "Remove";
+      removeBtn.onclick = () => {
+        course.modules.splice(index, 1);
+        renderModules();
+      };
+      div.appendChild(removeBtn);
+
+      modulesContainer.appendChild(div);
+    });
+
+    console.log("Course:", course);
+  }
+
+  document.getElementById("addModuleBtn").addEventListener("click", () => {
+    const name = prompt("Module name:");
+    let moduleid = generateModuleID();
+    if (name) {
+      course.modules.push({name,moduleid});
+      renderModules();
+    }
+  });
+
+  // Load course from API placeholder
+  async function loadCourse() {
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch("http://localhost:5046/api/course/getcoursecontent?courseId=" + courseId,{
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+    course = await response.json();
+    renderCourse();
+  }
+
+  function renderCourse()
+  {
+    courseTitleInput.value = course.title;
+    courseDescriptionInput.value = course.description;
+    courseImagePreview.src = getImageSrc(course.image);
+    renderModules();
+  }
+
+  courseTitleInput.addEventListener("input", () => course.title = courseTitleInput.value);
+  courseDescriptionInput.addEventListener("input", () => course.description = courseDescriptionInput.value);
+
+  document.getElementById("saveCourseBtn").addEventListener("click", saveCourse);
+
+  async function saveCourse() {
+  // ensure order consistency
+  const token = await auth.currentUser.getIdToken();
+
+  const response = await fetch("http://localhost:5046/api/course/updatecourse", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`, // reuse yours
+    },
+    body: JSON.stringify(course)
+  });
+
+  if (!response.ok) {
+    alert("Save failed: " + response.status);
+    return;
+  }
+  else {
+    alert("Course saved successfully!");
+    location.reload();
+  }
+}
+
+
+  function getImageSrc(imageLink) {
+  // If it's already a valid URL (http/https), use it directly
+  if (imageLink.startsWith('http://') || imageLink.startsWith('https://')) {
+    return imageLink;
+  }
+  
+  // If it's already a data URI, use it directly
+  if (imageLink.startsWith('data:')) {
+    return imageLink;
+  }
+  
+  // Otherwise, treat it as base64 and detect the format
+  // Check the first few bytes to determine image type
+  const imageType = detectImageType(imageLink);
+  return `data:${imageType};base64,${imageLink}`;
+}
+
+  function detectImageType(base64String) {
+  // Get the first few characters to check the magic bytes
+  const signatures = {
+    '/9j/': 'image/jpeg',  // JPEG
+    'iVBOR': 'image/png',  // PNG
+    'R0lGO': 'image/gif',  // GIF
+    'UklGR': 'image/webp', // WebP
+    'Qk': 'image/bmp',     // BMP
+    'PHN2Zy': 'image/svg+xml', // SVG
+  };
+  
+  for (const [signature, mimeType] of Object.entries(signatures)) {
+    if (base64String.startsWith(signature)) {
+      return mimeType;
+    }
+  }
+  
+  // Default to JPEG if we can't detect
+  return 'image/jpeg';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Module Editor</title>
+    <style>
+
+    </style>
+    </head>
+    <body>
+    <h2>Module Editor</h2>
+    <div id="moduleDetails">
+        <p id="modulename"></p><br>
+        <textarea id="moduledescription"></textarea><br>
+    </div>
+    <div id="moduleContents">
+        <h3>Module Contents</h3>
+        <div id="contentsContainer"></div>
+        <button id="addContentBtn">+ Add Content</button><select id="contentTypeSelect">
+            <option value="lesson">Lesson</option>
+            <option value="Task">Task</option>
+            <option value="quiz">Quiz</option>
+        </select>
+    </div>
+    <button id="saveModuleBtn" style="margin-top:20px;">Save Module</button>
+    <script type="module" src="./scripts/auth.js"></script>
+    <script type="module">
+        import { auth } from "./scripts/auth.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+        let user = null;
+        onAuthStateChanged(auth, (u) => 
+        {
+            user = u;
+            console.log("Auth state updated:", user);
+            if (user){
+                loadModule();
+            }
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('courseid');
+        const moduleId = urlParams.get('moduleid');
+
+        let module = {
+            id: moduleId,
+            courseid: courseId,
+            name: "",
+            description: "",
+            contents: []
+        };
+
+        let ContentsID = [];
+
+        function generateContentID() {
+            const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let id;
+            let tries = 0;
+            do {
+                if (tries > 5) {
+                    console.error("Failed to generate unique Content ID after multiple attempts.");
+                    return null;
+                }
+                id = '';
+                for (let i = 0; i < 2; i++) {
+                    id += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                tries++;
+            } while (ContentsID.includes(id));
+            ContentsID.push(id);
+            return id;
+        }
+
+        const modulenameInput = document.getElementById('modulename');
+        const moduledescriptionInput = document.getElementById('moduledescription');
+        const contentsContainer = document.getElementById('contentsContainer');
+        const addContentBtn = document.getElementById('addContentBtn');
+        const saveModuleBtn = document.getElementById('saveModuleBtn');
+        let contents = module.contents;
+
+        addContentBtn.onclick = addContent;
+
+        function renderModuleDetails() {
+            modulenameInput.textContent = module.name;
+            moduledescriptionInput.value = module.description;
+        }
+
+        function renderContents() 
+        {
+            contentsContainer.innerHTML = "";
+
+            contents.forEach((content, index) => 
+            {
+                const div = document.createElement("div");
+                div.className = "content";
+
+                const span = document.createElement("span");
+                span.textContent = content.name;
+                div.appendChild(span);
+
+                const spain = document.createElement("span");
+                spain.textContent = ` (${content.type})`;
+                div.appendChild(spain);
+
+                // pen button – rename content
+                const penBtn = document.createElement("button");
+                penBtn.className = "edit";
+                penBtn.textContent = "✎";
+                penBtn.onclick = () => 
+                {
+                    const newName = prompt("New content name:", content.name);
+                    if (newName) {
+                    content.name = newName;
+                        renderContents();
+                    }
+                };
+                div.appendChild(penBtn);
+                
+                //edit button
+                const editBtn = document.createElement("button");
+                editBtn.className = "editContent";
+                editBtn.textContent = "Edit";
+                editBtn.onclick = () => 
+                {
+                    //open content editor
+                    window.location.href = `CR${content.type}Editor.html?courseid=${courseId}&moduleid=${moduleId}&contentid=${content.id}`;
+                };
+                div.appendChild(editBtn);
+
+                // order up
+                const upBtn = document.createElement("button");
+                upBtn.className = "up";
+                upBtn.textContent = "↑";
+                upBtn.onclick = () => 
+                {
+                    if (index === 0) return;
+                    [contents[index - 1], contents[index]] =
+                    [contents[index], contents[index - 1]];
+                    renderContents();
+                };
+                div.appendChild(upBtn);
+
+                // order down
+                const downBtn = document.createElement("button");
+                downBtn.className = "down";
+                downBtn.textContent = "↓";
+                downBtn.onclick = () => 
+                {
+                    if (index === contents.length - 1) return;
+                    [contents[index + 1], contents[index]] =
+                    [contents[index], contents[index + 1]];
+                    renderContents();
+                };
+                div.appendChild(downBtn);
+
+                // remove
+                const removeBtn = document.createElement("button");
+                removeBtn.className = "remove";
+                removeBtn.textContent = "Remove";
+                removeBtn.onclick = () => 
+                {
+                    contents.splice(index, 1);
+                    renderContents();
+                };
+                div.appendChild(removeBtn);
+
+                contentsContainer.appendChild(div);
+            });
+
+            console.log("Module contents:", contents);
+        }
+
+        function addContent()
+        {
+            const contentName = prompt("Enter content name:");
+            if (contentName) {
+                const newContent = {
+                    id: generateContentID(),
+                    name: contentName,
+                    type: document.getElementById('contentTypeSelect').value
+                };
+                contents.push(newContent);
+                renderContents();
+            }
+        }
+
+        async function loadModule()
+        {
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch(`http://localhost:5046/api/course/getmodule?moduleId=${moduleId}&courseId=${courseId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            if (!response.ok) {
+                alert("Failed to load module");
+                return;
+            }
+            module = await response.json();
+            contents = module.contents;
+            renderModule();
+        }
+
+        function renderModule()
+        {
+            renderModuleDetails();
+            renderContents();
+            console.log("Module:", module);
+        }
+
+        moduledescriptionInput.addEventListener("input", () => module.description = moduledescriptionInput.value);
+
+        saveModuleBtn.addEventListener("click", saveModule);
+        
+        async function saveModule()
+        {
+            const token = await auth.currentUser.getIdToken();
+            
+            const response = await fetch("http://localhost:5046/api/course/updatemodule", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`, // reuse yours
+                },
+                body: JSON.stringify(module)
+            });
+            
+            if (!response.ok) {
+                alert("Save failed: " + response.statusText);
+                return;
+            }
+            else {
+                alert("Module saved successfully!");
+                location.reload();
+            }
+        }
+    </script>
+    </body>
+</html>
